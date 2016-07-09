@@ -6,3 +6,4 @@ build/
 runtime/
 logs/
 /bin/
+ivy/*.jar

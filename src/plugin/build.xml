@@ -40,6 +40,7 @@
      <ant dir="mimetype-filter" target="deploy"/>
      <ant dir="indexer-cloudsearch" target="deploy"/>
      <ant dir="indexer-dummy" target="deploy"/>
+     <ant dir="indexer-jms" target="deploy"/>
      <ant dir="indexer-elastic" target="deploy"/>
      <ant dir="indexer-solr" target="deploy"/>
      <ant dir="language-identifier" target="deploy"/>
@@ -157,6 +158,7 @@
     <ant dir="mimetype-filter" target="clean"/>
     <ant dir="indexer-cloudsearch" target="clean"/>
     <ant dir="indexer-dummy" target="clean"/>
+    <ant dir="indexer-jms" target="clean"/>
     <ant dir="indexer-elastic" target="clean"/>
     <ant dir="indexer-solr" target="clean"/>
     <ant dir="language-identifier" target="clean"/>
