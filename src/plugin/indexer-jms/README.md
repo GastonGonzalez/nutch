@@ -16,12 +16,21 @@ TODO
                     rev="1.0.1" conf="*->default" />
         <!-- End of indexer-jms dependencies -->
 
-2. Add `indexer-jms` to `$NUTCH_HOME/conf/nutch-site.xml`.
+2. Add `indexer-jms` to `$NUTCH_HOME/conf/nutch-site.xml`. As well as define your ActiveMQ topic and broker URL.
 
 
         <property>
             <name>plugin.includes</name>
             <value>protocol-http|urlfilter-regex|parse-(html|tika)|index-(basic|anchor)|urlnormalizer-(pass|regex|basic)|scoring-opic|indexer-jms</value>
+        </property>
+
+        <property>
+            <name>jms.index.broker.url</name>
+            <value>tcp://localhost:61616</value>
+        </property>
+        <property>
+            <name>jms.index.topic</name>
+            <value>nutch-index-topic</value>
         </property>
 
 

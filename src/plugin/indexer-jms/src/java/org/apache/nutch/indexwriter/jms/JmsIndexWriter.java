@@ -32,12 +32,41 @@ import javax.jms.*;
  */
 public class JmsIndexWriter implements IndexWriter {
     public static final Logger LOG = LoggerFactory.getLogger(JmsIndexWriter.class);
+
+    private ActiveMQConnectionFactory activeMQConnectionFactory;
+    private Connection connection;
+    private Session session;
+    private MessageProducer producer;
+    private String jmsBrokerUrl;
+    private String jmsTopic;
+
     private Configuration config;
     private boolean delete = false;
 
     @Override
     public void open(Configuration conf) throws IOException {
-        LOG.info("open() called with conf: '{}'", conf);
+
+        activeMQConnectionFactory = new ActiveMQConnectionFactory(jmsBrokerUrl);
+        try {
+            LOG.info("Creating connection factory for broker: '{}'", jmsBrokerUrl);
+            connection = activeMQConnectionFactory.createConnection();
+
+            LOG.info("Starting connection");
+            connection.start();
+
+            LOG.info("Creating session");
+            session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+            LOG.info("Creating topic: '{}'", jmsTopic);
+            Topic topic = session.createTopic(jmsTopic);
+
+            LOG.info("Creating message producer");
+            producer = session.createProducer(topic);
+
+        } catch (JMSException e) {
+            LOG.error("Unable to create ActiveMQ connection factory for broker: '{}'", jmsBrokerUrl, e);
+        }
+
     }
 
     @Override
@@ -50,21 +79,42 @@ public class JmsIndexWriter implements IndexWriter {
     @Override
     public void update(NutchDocument doc) throws IOException {
         LOG.debug("Updating document: '{}'", doc);
+        handleAddOrUpdate(doc);
     }
 
     @Override
     public void write(NutchDocument doc) throws IOException {
         LOG.debug("Adding document: '{}'", doc);
+        handleAddOrUpdate(doc);
+    }
+
+    private void handleAddOrUpdate(NutchDocument doc) {
+
+        TextMessage message = null;
+        try {
+            final String docId = doc.getFieldValue("id");
+            // TODO: change message type to body
+            LOG.info("Sending message for document with id: '{}'", docId);
+            message = session.createTextMessage(docId);
+            producer.send(message);
+        } catch (JMSException e) {
+            LOG.error("Unable to to send JMS message for document: '{}'", doc, e);
+        }
     }
 
     @Override
     public void commit() throws IOException {
-        LOG.debug("Performing commit.");
+        // noop
     }
 
     @Override
     public void close() throws IOException {
-        // TODO
+        try {
+            LOG.info("Closing connection to broker: '{}'", jmsBrokerUrl);
+            connection.stop();
+        } catch (JMSException e) {
+            LOG.error("Unable to close connector to broker: '{}'", jmsBrokerUrl);
+        }
     }
 
     @Override
@@ -76,9 +126,15 @@ public class JmsIndexWriter implements IndexWriter {
     public void setConf(Configuration conf) {
         config = conf;
 
-        final String jmsTopic = conf.get("jms.topic");
+        jmsBrokerUrl = conf.get(JmsIndexerConstants.BROKER_URL);
+        jmsTopic = conf.get(JmsIndexerConstants.TOPIC);
 
-        // TODO: error handling
+        if (null == jmsBrokerUrl || null == jmsTopic) {
+            final String msg = String.format("Missing JMS configuration. Ensure that '%s' and '%s' are defined.",
+                    JmsIndexerConstants.BROKER_URL, JmsIndexerConstants.TOPIC);
+            LOG.error(msg);
+            throw new RuntimeException(msg);
+        }
     }
 
     public String describe() {
