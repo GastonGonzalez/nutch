@@ -16,6 +16,7 @@
  */
 package org.apache.nutch.indexwriter.jms;
 
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.nutch.indexer.IndexWriter;
 import org.apache.nutch.indexer.NutchDocument;
@@ -23,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+
+import javax.jms.*;
 
 /**
  * JmsIndexWriter is responsible for converting NutchDocuments to a framework agnostic POJO to a JMS topic.
@@ -83,7 +86,30 @@ public class JmsIndexWriter implements IndexWriter {
         return sb.toString();
     }
 
-    public static void main (String args[]) {
-        System.out.println("Initial main method for indexer-jms.");
+    public static void main (String args[]) throws  Exception {
+
+        final String endpoint = "tcp://localhost:61616";
+        final String topicName = "nutch-index-topic-test";
+
+        System.out.println(String.format("Sending test JMS message to topic '%s' at '%s'",
+            topicName, endpoint));
+
+        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(endpoint);
+        Connection connection = factory.createConnection();
+
+        connection.start();
+
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Topic topic = session.createTopic(topicName);
+
+        MessageProducer producer = session.createProducer(topic);
+
+        TextMessage message = session.createTextMessage("!");
+        producer.send(message);
+
+        connection.stop();
+
+        System.exit(0);
     }
 }

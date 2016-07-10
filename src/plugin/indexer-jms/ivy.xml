@@ -36,6 +36,12 @@
   </publications>
 
   <dependencies>
+    <dependency org="org.apache.activemq" name="activemq-client"
+                rev="5.13.3" conf="*->default" />
+    <dependency org="org.apache.geronimo.specs" name="geronimo-jms_1.1_spec"
+                rev="1.1.1" conf="*->default" />
+    <dependency org="org.apache.geronimo.specs" name="geronimo-j2ee-management_1.1_spec"
+                rev="1.0.1" conf="*->default" />
   </dependencies>
   
 </ivy-module>
