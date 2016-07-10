@@ -16,68 +16,52 @@
  */
 package org.apache.nutch.indexwriter.jms;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.FileWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.nutch.indexer.IndexWriter;
+import org.apache.nutch.indexer.NutchDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.nutch.indexer.CleaningJob;
-import org.apache.nutch.indexer.NutchDocument;
-import org.apache.nutch.indexer.IndexWriter;
+
+import java.io.IOException;
 
 /**
- * JmsIndexWriter. This pluggable indexer writes <action>\t<url>\n lines to a
- * plain text file for debugging purposes. Possible actions are delete, update
- * and add.
+ * JmsIndexWriter is responsible for converting NutchDocuments to a framework agnostic POJO to a JMS topic.
  */
 public class JmsIndexWriter implements IndexWriter {
     public static final Logger LOG = LoggerFactory.getLogger(JmsIndexWriter.class);
     private Configuration config;
-    private Writer writer;
     private boolean delete = false;
 
     @Override
     public void open(Configuration conf) throws IOException {
-        LOG.warn("GASTON: open() called with conf: '{}'", conf);
-        // TODO
+        LOG.info("open() called with conf: '{}'", conf);
     }
 
     @Override
     public void delete(String key) throws IOException {
-        LOG.warn("GASTON: delete using key: '{}'", key);
         if (delete) {
-            writer.write("delete\t" + key + "\n");
+            LOG.debug("Deleting document using key: '{}'", key);
         }
     }
 
     @Override
     public void update(NutchDocument doc) throws IOException {
-        LOG.warn("Gaston: update nutch doc: '{}'", doc);
-        writer.write("update\t" + doc.getFieldValue("id") + "\n");
+        LOG.debug("Updating document: '{}'", doc);
     }
 
     @Override
     public void write(NutchDocument doc) throws IOException {
-        LOG.warn("Gaston: write nutch doc: '{}'", doc);
-        writer.write("add\t" + doc.getFieldValue("id") + "\n");
-    }
-
-    public void close() throws IOException {
-        LOG.warn("Gaston: close()");
-        writer.flush();
-        writer.close();
+        LOG.debug("Adding document: '{}'", doc);
     }
 
     @Override
     public void commit() throws IOException {
-        LOG.warn("Gaston: commit()");
-        writer.write("commit\n");
+        LOG.debug("Performing commit.");
+    }
+
+    @Override
+    public void close() throws IOException {
+        // TODO
     }
 
     @Override
@@ -87,27 +71,15 @@ public class JmsIndexWriter implements IndexWriter {
 
     @Override
     public void setConf(Configuration conf) {
-        LOG.warn("Gaston: setConf() with conf: '{}'", conf);
         config = conf;
-        String path = conf.get("dummy.path");
-        if (path == null) {
-            String message = "Missing path. Should be set via -Ddummy.path";
-            message += "\n" + describe();
-            LOG.error(message);
-            throw new RuntimeException(message);
-        }
 
-        try {
-            writer = new BufferedWriter(new FileWriter(conf.get("dummy.path")));
-        } catch (IOException e) {
-        }
+        final String jmsTopic = conf.get("jms.topic");
+
+        // TODO: error handling
     }
 
     public String describe() {
-        LOG.warn("Gaston: describe()");
         StringBuffer sb = new StringBuffer("JmsIndexWriter\n");
-        sb.append("\t").append(
-                "dummy.path : Path of the file to write to (mandatory)\n");
         return sb.toString();
     }
 
