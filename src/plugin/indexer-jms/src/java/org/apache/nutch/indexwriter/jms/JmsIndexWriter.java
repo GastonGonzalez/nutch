@@ -24,6 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.jms.*;
 
@@ -90,16 +93,37 @@ public class JmsIndexWriter implements IndexWriter {
 
     private void handleAddOrUpdate(NutchDocument doc) {
 
-        TextMessage message = null;
+        ObjectMessage message = null;
         try {
             final String docId = doc.getFieldValue("id");
-            // TODO: change message type to body
             LOG.info("Sending message for document with id: '{}'", docId);
-            message = session.createTextMessage(docId);
+
+            HashMap<String, Object> jmsDoc = adapt(doc);
+
+
+            for (Map.Entry<String, Object> entry : jmsDoc.entrySet()) {
+                LOG.info("----> " + entry.getKey()+" : "+entry.getValue());
+            }
+
+
+            message = session.createObjectMessage(jmsDoc);
             producer.send(message);
         } catch (JMSException e) {
             LOG.error("Unable to to send JMS message for document: '{}'", doc, e);
         }
+    }
+
+    private HashMap<String, Object> adapt(NutchDocument nutchDoc) {
+
+        Collection<String> nutchFieldNames = nutchDoc.getFieldNames();
+        HashMap<String, Object> jmsDoc = new HashMap<String, Object>();
+
+        // TODO: extract prefix to constant and config
+        for (String nutchFieldName: nutchFieldNames) {
+            jmsDoc.put("nutchfield." + nutchFieldName, nutchDoc.getFieldValue(nutchFieldName));
+        }
+
+        return jmsDoc;
     }
 
     @Override
