@@ -195,16 +195,33 @@ public class JmsIndexWriter implements IndexWriter {
         return sb.toString();
     }
 
+    /**
+     * <code>
+     *     Usage: nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter [brokerUrl] [topicName]
+     *         [brokerUrl] - Broker URL (e.g., tcp://localhost:61616)
+     *         [topicName] - Topic Name (e.g., nutch-index-topic-test)
+     * </code>
+     */
     public static void main (String args[]) throws  Exception {
 
-        // TODO: read from configuration or parse from command line
-        final String endpoint = "tcp://localhost:61616";
-        final String topicName = "nutch-index-topic-test";
+        // TODO: We does this get invoked by Nutch during normal operations.
+        if (args.length != 2) {
+            StringBuilder usage = new StringBuilder();
+            usage.append("Usage: nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter [brokerUrl] [topicName]");
+            usage.append("\t[brokerUrl] - Broker URL (e.g., tcp://localhost:61616)\n");
+            usage.append("\t[topicName] - Topic Name (e.g., nutch-index-topic-test)\n");
+
+            System.err.print(usage.toString());
+            System.exit(-1);
+        }
+
+        final String brokerUrl = args[0];
+        final String topicName = args[1];
 
         System.out.println(String.format("Sending test JMS message to topic '%s' at '%s'",
-            topicName, endpoint));
+            topicName, brokerUrl));
 
-        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(endpoint);
+        ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(brokerUrl);
         Connection connection = factory.createConnection();
 
         connection.start();
@@ -215,8 +232,22 @@ public class JmsIndexWriter implements IndexWriter {
 
         MessageProducer producer = session.createProducer(topic);
 
-        TextMessage message = session.createTextMessage("!");
-        producer.send(message);
+        // Create an empty object.
+        ObjectMessage message = null;
+        HashMap<String, Object> jmsDoc = new HashMap<String, Object>();
+
+        // Operation type. This is a fake type.
+        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_OP_TYPE, "TEST_ADD");
+
+        // Add our NutchDoc Id
+        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_FIELD_PREFIX + "id", "test-doc-id");
+
+        try {
+            message = session.createObjectMessage(jmsDoc);
+            producer.send(message);
+        } catch (JMSException e) {
+            e.printStackTrace();
+        }
 
         connection.stop();
 
