@@ -1,6 +1,7 @@
 # JMS Indexer Plugin
 
-TODO
+The indexer-jms plugin is responsible for converting Nutch documents to a generic, serializable object model
+(a hash map) and sending the object model to a user-defined ActiveMQ topic.
 
 ## Running indexer-jms
 
@@ -43,4 +44,5 @@ TODO
 4. Test the plugin.
 
 
-        $ nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter
+        $ nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter \
+            tcp://localhost:61616 nutch-index-topic-test
