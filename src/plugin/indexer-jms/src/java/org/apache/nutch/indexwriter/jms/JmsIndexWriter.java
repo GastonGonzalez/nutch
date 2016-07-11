@@ -51,19 +51,19 @@ public class JmsIndexWriter implements IndexWriter {
 
         activeMQConnectionFactory = new ActiveMQConnectionFactory(jmsBrokerUrl);
         try {
-            LOG.info("Creating connection factory for broker: '{}'", jmsBrokerUrl);
+            LOG.info("Creating ActiveMQ connection factory with broker URL: '{}'", jmsBrokerUrl);
             connection = activeMQConnectionFactory.createConnection();
 
-            LOG.info("Starting connection");
+            LOG.info("Starting JMS connection");
             connection.start();
 
-            LOG.info("Creating session");
+            LOG.info("Creating JMS session");
             session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
-            LOG.info("Creating topic: '{}'", jmsTopic);
+            LOG.info("Creating JMS topic: '{}'", jmsTopic);
             Topic topic = session.createTopic(jmsTopic);
 
-            LOG.info("Creating message producer");
+            LOG.info("Creating JMS message producer");
             producer = session.createProducer(topic);
 
         } catch (JMSException e) {
@@ -75,41 +75,67 @@ public class JmsIndexWriter implements IndexWriter {
     @Override
     public void delete(String key) throws IOException {
         if (delete) {
-            LOG.debug("Deleting document using key: '{}'", key);
+            handleDelete(key, JmsIndexerConstants.JMS_NUTCH_OP_DELETE);
         }
     }
 
     @Override
     public void update(NutchDocument doc) throws IOException {
-        LOG.debug("Updating document: '{}'", doc);
-        handleAddOrUpdate(doc);
+        handleAddOrUpdate(doc, JmsIndexerConstants.JMS_NUTCH_OP_UPDATE);
     }
 
     @Override
     public void write(NutchDocument doc) throws IOException {
-        LOG.debug("Adding document: '{}'", doc);
-        handleAddOrUpdate(doc);
+        handleAddOrUpdate(doc, JmsIndexerConstants.JMS_NUTCH_OP_ADD);
     }
 
-    private void handleAddOrUpdate(NutchDocument doc) {
+    private void handleDelete(String docId, String operationType) {
+        LOG.info("Sending message for document with id: '{}' for operation: '{}'", docId, operationType);
 
         ObjectMessage message = null;
-        try {
-            final String docId = doc.getFieldValue("id");
-            LOG.info("Sending message for document with id: '{}'", docId);
 
+        // Create an empty object.
+        HashMap<String, Object> jmsDoc = new HashMap<String, Object>();
+
+        // Operation type
+        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_OP_TYPE, operationType);
+
+        // Add our NutchDoc Id
+        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_FIELD_PREFIX + "id", docId);
+
+        try {
+            message = session.createObjectMessage(jmsDoc);
+            producer.send(message);
+        } catch (JMSException e) {
+            LOG.error("Unable to to send JMS message for document: '{}' for operation: '{}'", docId, operationType, e);
+        }
+    }
+
+    private void handleAddOrUpdate(NutchDocument doc, String operationType) {
+
+        ObjectMessage message = null;
+        final String docId = doc.getFieldValue("id");
+
+        try {
+            LOG.info("Sending message for document with id: '{}' for operation: '{}'", docId, operationType);
+
+            // Convert or NutchDoc to a generic, serializable object.
             HashMap<String, Object> jmsDoc = adapt(doc);
 
+            // Operation type
+            jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_OP_TYPE, operationType);
 
-            for (Map.Entry<String, Object> entry : jmsDoc.entrySet()) {
-                LOG.info("----> " + entry.getKey()+" : "+entry.getValue());
+            // Dump our generic object
+            if (LOG.isDebugEnabled()) {
+                for (Map.Entry<String, Object> entry : jmsDoc.entrySet()) {
+                    LOG.debug("---> Field: '{} ', Value: '{}'",  entry.getKey(), entry.getValue());
+                }
             }
-
 
             message = session.createObjectMessage(jmsDoc);
             producer.send(message);
         } catch (JMSException e) {
-            LOG.error("Unable to to send JMS message for document: '{}'", doc, e);
+            LOG.error("Unable to to send JMS message for document: '{}' for operation: '{}'", docId, operationType, e);
         }
     }
 
@@ -118,10 +144,13 @@ public class JmsIndexWriter implements IndexWriter {
         Collection<String> nutchFieldNames = nutchDoc.getFieldNames();
         HashMap<String, Object> jmsDoc = new HashMap<String, Object>();
 
-        // TODO: extract prefix to constant and config
+        // Grab all Nutch fields and convert them to generic key/values
         for (String nutchFieldName: nutchFieldNames) {
-            jmsDoc.put("nutchfield." + nutchFieldName, nutchDoc.getFieldValue(nutchFieldName));
+            jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_FIELD_PREFIX + nutchFieldName,
+                    nutchDoc.getFieldValue(nutchFieldName));
         }
+
+        // TODO: Grab Metadata
 
         return jmsDoc;
     }
@@ -134,10 +163,10 @@ public class JmsIndexWriter implements IndexWriter {
     @Override
     public void close() throws IOException {
         try {
-            LOG.info("Closing connection to broker: '{}'", jmsBrokerUrl);
+            LOG.info("Closing JMS connection to broker: '{}'", jmsBrokerUrl);
             connection.stop();
         } catch (JMSException e) {
-            LOG.error("Unable to close connector to broker: '{}'", jmsBrokerUrl);
+            LOG.error("Unable to close connection to broker: '{}'", jmsBrokerUrl);
         }
     }
 
@@ -168,6 +197,7 @@ public class JmsIndexWriter implements IndexWriter {
 
     public static void main (String args[]) throws  Exception {
 
+        // TODO: read from configuration or parse from command line
         final String endpoint = "tcp://localhost:61616";
         final String topicName = "nutch-index-topic-test";
 
