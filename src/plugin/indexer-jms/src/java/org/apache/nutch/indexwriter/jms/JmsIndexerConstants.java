@@ -25,6 +25,8 @@ public interface JmsIndexerConstants {
     public static final String BROKER_URL = "jms.index.broker.url";
     /** JMS index topic property name */
     public static final String TOPIC = "jms.index.topic";
+    /** JMS Nutch metadat name prefix */
+    public static final String JMS_NUTCH_METADATA_PREFIX = "nutch.metadata.";
     /** JMS Nutch index field key prefix */
     public static final String JMS_NUTCH_FIELD_PREFIX = "nutch.field.";
     /** Nutch operation (e.g., add, update, delete) prefix */

@@ -20,6 +20,7 @@ import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.nutch.indexer.IndexWriter;
 import org.apache.nutch.indexer.NutchDocument;
+import org.apache.nutch.metadata.Metadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,7 +151,12 @@ public class JmsIndexWriter implements IndexWriter {
                     nutchDoc.getFieldValue(nutchFieldName));
         }
 
-        // TODO: Grab Metadata
+        // Grab all Nutch metadata elements and convert them to generic key/values
+        final Metadata metaData = nutchDoc.getDocumentMeta();
+        for (String nutchMetadataName: metaData.names()) {
+            jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_METADATA_PREFIX + nutchMetadataName,
+                    metaData.get(nutchMetadataName));
+        }
 
         return jmsDoc;
     }
@@ -204,7 +210,6 @@ public class JmsIndexWriter implements IndexWriter {
      */
     public static void main (String args[]) throws  Exception {
 
-        // TODO: We does this get invoked by Nutch during normal operations.
         if (args.length != 2) {
             StringBuilder usage = new StringBuilder();
             usage.append("Usage: nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter [brokerUrl] [topicName]");
