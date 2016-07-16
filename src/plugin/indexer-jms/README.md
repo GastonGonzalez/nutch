@@ -41,8 +41,11 @@ The indexer-jms plugin is responsible for converting Nutch documents to a generi
         $ cd $NUTCH_HOME
         $ ant runtime
 
-4. Test the plugin.
+4. Test the plugin. Send a message to rquest and add, then request a delete.
 
 
         $ nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter \
-            tcp://localhost:61616 nutch-index-topic-test
+            tcp://localhost:61616 nutch-index-topic ADD_DOC test-doc-id
+
+        $ nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter \
+            tcp://localhost:61616 nutch-index-topic DELETE_DOC test-doc-id

@@ -203,18 +203,22 @@ public class JmsIndexWriter implements IndexWriter {
 
     /**
      * <code>
-     *     Usage: nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter [brokerUrl] [topicName]
+     *     Usage: nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter [brokerUrl] [topicName] [opType] [docId]
      *         [brokerUrl] - Broker URL (e.g., tcp://localhost:61616)
      *         [topicName] - Topic Name (e.g., nutch-index-topic-test)
+     *         [opType]    - Operation Type (e.g., ADD_DOC|DELETE_DOC)
+     *         [docId]     - Document ID (e.g., test-doc-id)
      * </code>
      */
     public static void main (String args[]) throws  Exception {
 
-        if (args.length != 2) {
+        if (args.length != 4) {
             StringBuilder usage = new StringBuilder();
             usage.append("Usage: nutch plugin indexer-jms org.apache.nutch.indexwriter.jms.JmsIndexWriter [brokerUrl] [topicName]");
             usage.append("\t[brokerUrl] - Broker URL (e.g., tcp://localhost:61616)\n");
             usage.append("\t[topicName] - Topic Name (e.g., nutch-index-topic-test)\n");
+            usage.append("\t[opType]    - Operation Type (e.g., ADD_DOC|DELETE_DOC)\n");
+            usage.append("\t[docId]     - Document ID (e.g., test-doc-id)\n");
 
             System.err.print(usage.toString());
             System.exit(-1);
@@ -222,6 +226,8 @@ public class JmsIndexWriter implements IndexWriter {
 
         final String brokerUrl = args[0];
         final String topicName = args[1];
+        final String opType = args[2];
+        final String docId = args[3];
 
         System.out.println(String.format("Sending test JMS message to topic '%s' at '%s'",
             topicName, brokerUrl));
@@ -242,10 +248,10 @@ public class JmsIndexWriter implements IndexWriter {
         HashMap<String, Object> jmsDoc = new HashMap<String, Object>();
 
         // Operation type. This is a fake type.
-        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_OP_TYPE, "TEST_ADD");
+        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_OP_TYPE, opType);
 
         // Add our NutchDoc Id
-        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_FIELD_PREFIX + "id", "test-doc-id");
+        jmsDoc.put(JmsIndexerConstants.JMS_NUTCH_FIELD_PREFIX + "id", docId);
 
         try {
             message = session.createObjectMessage(jmsDoc);
